@@ -1,0 +1,10 @@
+earthengine-api
+geemap
+geopandas
+pandas
+shapely
+scikit-learn
+xgboost
+shap
+matplotlib
+numpy
