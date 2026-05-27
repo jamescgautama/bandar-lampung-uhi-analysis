@@ -1,54 +1,104 @@
 # Bandar Lampung Urban Heat Island (UHI) Analysis
 
-A tool to analyze Urban Heat Island effects using Google Earth Engine and Machine Learning. It looks at Bandar Lampung, Indonesia, to see how things like vegetation and buildings affect surface temperature.
+An environmental analysis tool utilizing the Google Earth Engine (GEE) API and Machine Learning to model Urban Heat Island (UHI) intensity and identify thermodynamic drivers in Bandar Lampung, Indonesia.
+
+## Features
+
+- **Automated GEE Collection**: Retrieves and filters Landsat 8/9 and Sentinel-2 imagery for target years, exporting data gridded at 750m spatial resolution.
+- **Surface Temperature Prediction**: Trains Scikit-Learn Random Forest and XGBoost regressors to predict Land Surface Temperature (LST).
+- **SHAP Explanation**: Explains model predictions using SHAP (SHapley Additive exPlanations) values to identify the primary drivers of localized heating.
+- **Geospatial Mapping**: Exports analysis regions as GeoJSON boundary structures (`export.geojson`) for frontend integration.
+
+## Architecture Overview
+
+```text
+       +-------------------------------------------------------+
+       |             Google Earth Engine (GEE) API             |
+       |  (Landsat 8/9 LST & Sentinel-2 Vegetation Indices)   |
+       +-------------------------------------------------------+
+                                   |
+                                   v  GEE Task Export (Google Drive)
+       +-------------------------------------------------------+
+       |             uhi_data_multiyear_export.csv             |
+       +-------------------------------------------------------+
+                                   |
+                                   v  python main.py --analyze
+       +-------------------------------------------------------+
+       |             Pandas Preprocessing & Grid Align         |
+       +-------------------------------------------------------+
+                                   |
+                   +---------------+---------------+
+                   |                               |
+                   v                               v
+       [ Random Forest Regressor ]         [ XGBoost Regressor ]
+                   |                               |
+                   +---------------+---------------+
+                                   |
+                                   v
+       +-------------------------------------------------------+
+       |           SHAP Feature Importance & Plots             |
+       +-------------------------------------------------------+
+```
+
+## Tech Stack
+
+- **Geospatial Platform**: Google Earth Engine (Python API)
+- **Language**: Python 3.12+
+- **Machine Learning**: Scikit-Learn, XGBoost, SHAP
+- **Data Wrangling**: Pandas, GeoPandas, NumPy
 
 ## Setup
 
-### Requirements
-* Google Earth Engine account
-* Python 3.12+
-* Authenticate GEE by running `earthengine authenticate`
+### Prerequisites
+- Python 3.12+
+- Active Google Earth Engine account
+- GEE project authenticated on your machine
 
-### Install
-1. Clone this repo and go into the folder.
-2. Set up a virtual environment:
+### Installation & Auth
+1. Set up a virtual environment and install packages:
    ```bash
    python3 -m venv venv
-   source venv/bin/activate
+   source venv/bin/activate  # On Linux/macOS
+   # or
+   venv\Scripts\activate     # On Windows
+   
    pip install -r requirements.txt
    ```
-3. Update `uhi/config.py` with your Earth Engine Project ID.
+2. Authenticate your Earth Engine environment:
+   ```bash
+   earthengine authenticate
+   ```
+3. Open `uhi/config.py` and update the GEE project settings:
+   ```python
+   GEE_PROJECT_ID = 'your-gee-project-id'
+   ```
 
 ## Usage
 
-Use `main.py` for everything.
+All commands are controlled using the `main.py` entrypoint script.
 
-### 1. Collect Data
-Starts a GEE task to export data to your Google Drive.
+### 1. Collect Data from Earth Engine
+Trigger a task on GEE to process satellite images and export the tabular grid data to your Google Drive:
 ```bash
 python main.py --collect
 ```
-Once it's done, download the CSV to this folder.
+Once the export task finishes on your GEE console, download the output CSV file to the root of this project folder under the name `uhi_data_multiyear_export.csv`.
 
-### 2. Run Analysis
-Preprocesses data and trains models (Random Forest, XGBoost, etc.).
+### 2. Run Modeling & Analysis
+Preprocess the downloaded dataset, split training boundaries, fit machine learning regressors, and show SHAP impact values:
 ```bash
 python main.py --analyze
 ```
 
-## Summary
+## Environmental Indices & Analysis
 
-### Problem
-Bandar Lampung is getting hotter as it builds up. This project finds out why by looking at temperature (LST) versus vegetation (NDVI), buildings (NDBI), and water (MNDWI).
+The analysis predicts Land Surface Temperature (LST) using several remote sensing indicators:
+- **NDVI (Normalized Difference Vegetation Index)**: Measures vegetation density and health (acts as a cooling factor).
+- **NDBI (Normalized Difference Built-Up Index)**: Highlights man-made structures, buildings, and concrete surfaces (acts as a heating factor).
+- **MNDWI (Modified Normalized Difference Water Index)**: Maps open water bodies.
+- **Elevation / Coast Proximity**: Incorporates digital elevation models to evaluate terrain-based cooling and sea-breeze influences.
 
-### How it works
-1. Pulls data from Sentinel-2 and Landsat 8/9 via GEE.
-2. Grids everything to 750m resolution.
-3. Uses Random Forest and XGBoost to predict temperature.
-4. Uses SHAP to see which factors matter most.
-
-### Results
-* Random Forest works best (R² ~0.85).
-* More buildings (NDBI) = more heat.
-* More trees (NDVI) = less heat.
-* Elevation and being near the coast also help cool things down.
+### Key Modeling Findings
+- **Predictive Performance**: Random Forest achieves the highest performance with an $R^2 \approx 0.85$.
+- **Thermodynamic Drivers**: Built-up densities (NDBI) are directly proportional to surface temperature spikes, while dense vegetation (NDVI) is the strongest cooling buffer.
+- **Elevation and Coastal Cooling**: Proximity to the coast and higher elevation act as secondary cooling mitigators against urban heat retention.
